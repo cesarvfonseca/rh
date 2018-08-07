@@ -2,7 +2,7 @@
 	function Connect_DB()
 	{
 	    $serverName = "MEXQ-SERVER4,1433";
-		$database = "MEXQAPPdbr";
+		$database = "MEXQAPPPr";
 		$uid = "sa";
 		$pwd = "P@ssw0rd";
 	

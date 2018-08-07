@@ -50,16 +50,14 @@
 						<i class="fas fa-info"></i>
 					</a>
 					<?php echo $row ["voboRH"]; ?>
-					<?php echo $jefe_autorizacion; ?>
-					<?php echo $rh_autorizacion; ?>
 				</td>
 				<td class="autorizado">
 					<div class="btn-group btn-group-justified" role="group" data-toggle="buttons">
 					      <div class="btn-group" role="group">
-				      		<button type="button" class="btn btn-sm <?php echo	$btnaClass ?> btnAutorizar" value="<?php echo $row ['id']; ?>" data-idemp="<?php echo $_SESSION["userActive"];?>">
+				      		<button tabindex="0" type="button" class="btn btn-sm <?php echo	$btnaClass ?> btnAutorizar" value="<?php echo $row ['id']; ?>" data-idemp="<?php echo $_SESSION["userActive"];?>">
 					        	<input class="custom-control-input" type="radio">Autorizado
 					    	</button>
-					        <button type="button" class="btn btn-sm <?php echo	$btnbClass ?> btnNA" value="<?php echo $row ['id']; ?>" data-idemp="<?php echo $_SESSION["userActive"];?>">
+					        <button tabindex="1" type="button" class="btn btn-sm <?php echo	$btnbClass ?> btnNA" value="<?php echo $row ['id']; ?>" data-idemp="<?php echo $_SESSION["userActive"];?>">
 					        	<input class="custom-control-input" type="radio">No Autorizado
 					    	</button>
 					      </div>

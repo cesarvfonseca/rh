@@ -37,7 +37,7 @@ if ($accion == 'login')
 }
 $conn = null;
 }catch(PDOException $e) {
-        	// En caso de un error, tomar la exepcion
+    // En caso de un error, tomar la exepcion
    $respuesta = array(
     'pass' => $e->getMessage()
 );
@@ -53,15 +53,13 @@ if ($accion == 'txt' || $accion == 'txtc')
     $horas = $_POST['horas'];
     $razon = $_POST['razon'];
     $employeeID = $_POST["employeeID"];
-    // $registros = 0;
-    $NOW = date('Y-m-d');
     try{
         if ($accion == 'txt')
             $tipo = 1;
         else
             $tipo = 2;
         $insert_qry = "INSERT INTO P1TXTVAC (employee,fecha,tipo,horas,emp_observaciones,crtd_user,lupd_datetime,lupd_user)
-                        VALUES (:Employeeid,:Fecha,:Tipo,:Horas,:Razon,:User,:Lupd_date,:Lupd_user)";
+                        VALUES (:Employeeid,:Fecha,:Tipo,:Horas,:Razon,:User,GETDATE(),:Lupd_user)";
         $stmnt = $conn -> prepare ($insert_qry);
         $stmnt -> bindParam(':Employeeid', $employeeID, PDO::PARAM_STR);
         $stmnt -> bindParam(':Fecha', $fecha, PDO::PARAM_STR);
@@ -69,13 +67,58 @@ if ($accion == 'txt' || $accion == 'txtc')
         $stmnt -> bindParam(':Horas', $horas, PDO::PARAM_INT);
         $stmnt -> bindParam(':Razon', $razon, PDO::PARAM_STR);
         $stmnt -> bindParam(':User', $employeeID, PDO::PARAM_STR);
-        $stmnt -> bindParam(':Lupd_date', $NOW, PDO::PARAM_STR);
         $stmnt -> bindParam(':Lupd_user', $employeeID, PDO::PARAM_STR);
         $stmnt -> execute();
         $respuesta = array(
             'estado' => 'correcto'
         );
         $stmt = null;
+        $conn = null;
+    }catch(PDOException $e) {
+        // En caso de un error, tomar la exepcion
+        $respuesta = array(
+            'estado' => 'error',
+            'log' => $e->getMessage()
+        );
+    }
+    echo json_encode($respuesta);
+}
+
+//EDITAR INCIDENCIAS DEL Empleado
+if ($accion == 'editar_incidencia')
+{
+    // die(json_encode($_POST));
+    include '../function/connection.php';
+    $conn = Connect_DB();
+    $horas = $_POST['horas'];
+    $idempleado = $_POST['idempleado'];
+    $idmov = $_POST['idmov'];
+    try{
+        $queryv = "SELECT jefe_autorizacion FROM P1TXTVAC WHERE id=:ID_MOV";
+        $stmnt = $conn -> prepare ($queryv);
+        $stmnt -> bindParam(':ID_MOV', $idmov, PDO::PARAM_INT);
+        $stmnt -> execute();
+        if ($row = $stmnt->fetch(PDO::FETCH_ASSOC)) {
+          $estado = $row['jefe_autorizacion'];
+          if ($estado == 0) {
+              $update_qry = "UPDATE P1TXTVAC SET horas = :Horas, lupd_datetime = GETDATE(), lupd_user = :User WHERE id = :ID";
+              $stmnt = $conn -> prepare ($update_qry);
+              $stmnt -> bindParam(':Horas', $horas, PDO::PARAM_INT);
+              $stmnt -> bindParam(':User', $idempleado, PDO::PARAM_INT);
+              $stmnt -> bindParam(':ID', $idmov, PDO::PARAM_INT);
+              $stmnt -> execute();
+              $respuesta = array(
+                  'estado' => 'correcto',
+                  'informacion' => 'La incidencia ha sido actualizada!'
+              );
+          }else{
+                $respuesta = array(
+                    'estado' => 'incorrecto',
+                    'informacion' => 'Ya esta validada por tu jefe directo'
+                );
+              }
+          }
+        $stmnt = null;
         $conn = null;
     }catch(PDOException $e) {
         // En caso de un error, tomar la exepcion
@@ -139,14 +182,12 @@ if ($accion == 'voboJefe')
     $status = $_POST['status'];
     $employeeID = $_POST['idempleado'];
     $observaciones_default = $_POST['observaciones_default'];
-    $fecha_actual = date('Y-m-d');
     try{
-        $update_qry = "UPDATE P1TXTVAC SET jefe_autorizacion=:Status, lupd_datetime=:Fecha, lupd_user=:Employeeid,jefe_observaciones=:Observaciones_jefe WHERE id=:IDM";
+        $update_qry = "UPDATE P1TXTVAC SET jefe_autorizacion=:Status, lupd_datetime=GETDATE(), lupd_user=:Employeeid,jefe_observaciones=:Observaciones_jefe WHERE id=:IDM";
         $stmnt = $conn -> prepare ($update_qry);
         $stmnt -> bindParam(':Status', $status, PDO::PARAM_INT);
         $stmnt -> bindParam(':Employeeid', $employeeID, PDO::PARAM_STR);
         $stmnt -> bindParam(':Observaciones_jefe', $observaciones_default, PDO::PARAM_STR);
-        $stmnt -> bindParam(':Fecha', $fecha_actual, PDO::PARAM_STR);
         $stmnt -> bindParam(':IDM', $idM, PDO::PARAM_INT);
         $stmnt -> execute();
         $respuesta = array(

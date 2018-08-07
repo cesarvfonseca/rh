@@ -60,11 +60,13 @@
 			<tr>
 				<td><?php echo $row ["tipo_incidencia"]; ?></td>
 				<td><?php echo $row ["fecha"]; ?></td>
-				<td>
+				<td class="row_hours">
 					<a tabindex="0" class="btn btn-sm btn-outline-dark" role="button" data-toggle="popover" data-trigger="focus" title="Razón" data-content="<?php echo $row ["emp_observaciones"]; ?>">
 						<i class="fas fa-info"></i>
 					</a>
-					<?php echo number_format($row ["horas"],1); ?>
+					<b>
+						<?php echo number_format($row ["horas"],1); ?>
+					</b>
 				</td>
 				<td><?php echo $row ["dias"]; ?></td>
 				<td id="vobo">
@@ -80,14 +82,27 @@
 					<?php echo $row ["voboRH"]; ?>
 				</td>
 				<td>
+				<?php 
+					$incidencia_tipo = $row ["tipo"];
+					if ($incidencia_tipo < 3){ ?>
 					<a tabindex="0"
-					class="btn btn-sm btn-primary btnEditar"
-					data-idemp="<?php echo $_SESSION["userActive"];?>"
-					data-mov="<?php echo $row ["id"];?>"
-					data-horas="<?php echo number_format($row ["horas"],1); ?>"
-					role="button">
-					<i class="fas fa-pen-square"> Editar</i>
-				</a>
+						class="btn btn-sm btn-primary btnEditar"
+						data-idemp="<?php echo $_SESSION["userActive"];?>"
+						data-mov="<?php echo $row ["id"];?>"
+						data-horas="<?php echo number_format($row ["horas"],1); ?>"
+						role="button">
+						<i class="fas fa-pen-square"></i> Editar
+					</a>
+
+				<?php } else { ?>
+
+					<a tabindex="0"
+						class="btn btn-sm btn-secondary disabled"
+						role="button">
+						<i class="fas fa-pen-square"></i> Editar
+					</a>
+
+				<?php } ?>
 
 				<a tabindex="1"
 					class="btn btn-sm btn-danger btnEliminar"

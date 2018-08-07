@@ -274,7 +274,7 @@ function getComboA(selectObject) {
           $('[data-toggle="popover"]').popover()
         })
 
-        $(".btnAutorizar, .btnNA").click(function(){
+        $(".btnAutorizar, .btnNA").click(async function(){
             // console.log('Click');
             var tipo = 'voboJefe';
             if ($(this).hasClass('btnAutorizar')) {
@@ -295,13 +295,22 @@ function getComboA(selectObject) {
                     $(".btnAutorizar").removeClass('btn-success')
                     $(this).addClass('btn-danger');
             }
-            // console.log(idempleado);
+            const {value: observaciones_jefe} = await swal({
+              input: 'textarea',
+              inputPlaceholder: 'Type your message here',
+              inputValue: observaciones_default,
+              showCancelButton: true
+            })
+
+            //OBSERVACIONES DEL JEFE
+            if (observaciones_jefe) {
+            swal(observaciones_jefe)
             var datosAutorizado = new FormData();
             datosAutorizado.append('id', idMovimiento);
             datosAutorizado.append('status', status);
             datosAutorizado.append('accion', tipo);
             datosAutorizado.append('idempleado', idempleado);
-            datosAutorizado.append('observaciones_default', observaciones_default);
+            datosAutorizado.append('observaciones_default', observaciones_jefe);
 
             // CREAR LA INSTANCIA AJAX PARA EL LLAMADO
             var xmlhr = new XMLHttpRequest();
@@ -326,7 +335,9 @@ function getComboA(selectObject) {
             }
             // Enviar la petición
             xmlhr.send(datosAutorizado);
+          }
         });
+
 
         console.log('VALOR PANEL PERSONAL SELECCIONADO');
     } else if (value == 'non' ) {
@@ -344,28 +355,68 @@ async function editarRegistros(btnEditar){
   var idempleado = btnEditar.data('idemp'),
       idmov = btnEditar.data('mov'),
       horas_bd = btnEditar.data('horas'),
-      accion = 'editar_incidencia',
-      expresion_regular = '^-?\d+(?:.\d+)?(?:[Ee][-+]?\d+)?$';
-
+      accion = 'editar_incidencia';
       const {value: horas} = await swal({
       title: 'Modificar Horas',
       input: 'text',
+      inputPlaceholder: 'Ingrese horas ej: 1.5 ',
       inputValue: horas_bd
       })
 
-      if ( (horas === horas_bd) && (horas.trim() === '') ) {
-        if (expresion_regular.test(horas)) {
-          swal('Tu ingresaste: ' + horas)
-        }else{
-          swal(
+      if ( horas ) {
+        var editar_registro = new FormData();
+        editar_registro.append('horas',horas);
+        editar_registro.append('idempleado',idempleado);
+        editar_registro.append('idmov',idmov);
+        editar_registro.append('accion',accion);
+
+        // CREAR LA INSTANCIA AJAX PARA EL LLAMADO
+        var xmlhr = new XMLHttpRequest();
+        //ABRIR LA CONEXION
+        xmlhr.open('POST', 'inc/model/control.php', true);
+        // VERIFICAR LA RESPUESTA DEL SERVICIO
+        xmlhr.onload = function(){
+            if (this.status === 200) {
+                var respuesta = JSON.parse(xmlhr.responseText);
+                if (respuesta.estado === 'correcto') {
+                    var informacion = respuesta.informacion;
+                    swal(
+                      'Registro Actualizado!',
+                      informacion,
+                      'success'
+                    )
+                  //ACTUALIZAR LA HORAS EN LA TABLA
+                  btnEditar.parent().parent().find(".row_hours b").text(horas);
+                } else if (respuesta.estado === 'incorrecto') {
+                  var informacion = respuesta.informacion;
+                  swal(
+                    'Registro no editado!',
+                    informacion,
+                    'info'
+                  )
+                } else {
+                    swal({
+                        title: 'Error!',
+                        text: 'Hubo un error',
+                        type: 'error'
+                    })
+                }
+            }
+        }
+        // Enviar la petición
+        xmlhr.send(editar_registro);
+
+      } else{
+        swal(
               'Error!',
-              'El valor '+horas+' es incorrecto',
+              'Las horas no pueden ir vacias',
               'error'
             )
-        }
       }
 
 }
+
+
 
 //FUNCION ELIMINAR REGISTROS DE LA TABLA EMPLEADO
 function eliminarRegistros(btnEliminar){
