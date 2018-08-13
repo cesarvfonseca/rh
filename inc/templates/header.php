@@ -9,7 +9,13 @@
         Bienvenido <?php echo $_SESSION["userName"] ?>
       </label>
       <!-- <button class="btn btn-outline-warning my-2 my-sm-0" type="submit">Cerrar Sesión</button> -->
-      <div class="pull-right"><a href="inc/model/logout.php"><button type="submit" class="btn navbar-btn btn-danger my-sm-0">Salir <i class="fas fa-sign-out-alt"></i></button></a></div>
+      <div class="pull-right btnSalir">
+        <a class="btn btn-sm btn-danger text-white" 
+            data-idemp="<?php echo $_SESSION["userActive"];?>"
+            role="button">
+            Salir <i class="fas fa-sign-out-alt"></i>
+        </a>
+      </div>
     <?php } ?>
 
   <!-- </form> -->

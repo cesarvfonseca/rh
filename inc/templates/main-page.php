@@ -5,6 +5,7 @@
 	<div class="col-md-3">
 		<h4 class="display-5">
 			<p>Nomina: <?php echo ($_SESSION['userActive']); ?></p>
+			<input type="hidden" id="employeeID" value="<?php echo $_SESSION["userActive"];?>">
 		</h4>	
 	</div>
 	<div class="col-md-9">
@@ -13,6 +14,28 @@
 		</h4>	
 	</div>
 </div>
+<hr>
+<div class="row">
+	<table class="table table-striped table-bordered table-hover text-center">
+		<thead class="bg-primary text-white">
+		    <tr>
+		      <th scope="col">Horas Positivas</th>
+		      <th scope="col">Horas Negativas</th>
+		      <th scope="col">Total de Horas</th>
+		      <th scope="col">Dias de vacaciones</th>
+		    </tr>
+  		</thead>
+  		<tbody>
+  			<tr>
+  				<td><p class="h2"><?php echo number_format($total_txt_favor,1); ?></p></td>
+  				<td><p class="h2"><?php echo number_format($total_txt_contra,1); ?></p></td>
+  				<td><p class="h2"><?php echo number_format($total_txt_favor-$total_txt_contra,1); ?></p></td>
+  				<td><p class="h2"><?php echo $total_vacaciones; ?></p></td>
+  			</tr>
+  		</tbody>
+	</table>
+</div>
+
 <div class="row">
 	<div class="col-md-4">
 	  <div class="form-group">

@@ -4,7 +4,7 @@
  ?>
 <div class="row">	
 	<div class="col-md-12 table-responsive-sm">	
-		<table id="infoTable" class="table table-striped table-bordered table-hover table-sm text-left table-sm">
+		<table id="infoTable" class="table table-striped table-bordered table-hover text-left table-sm">
 			<thead class="bg-primary text-white text-center">
 				<!-- <th>id</th> -->
 				<th>Nomina</th>

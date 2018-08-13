@@ -13,6 +13,12 @@ function eventListeners_(){
     if(document.querySelector('.nuevo-vacaciones') !== null ) {
         document.querySelector('.nuevo-vacaciones').addEventListener('click', enviarVACACIONES);
     }
+
+    //CERRAR SESION
+    if(document.querySelector('.btnSalir') !== null ) {
+        document.querySelector('.btnSalir').addEventListener('click', cerrarSesion);
+    }
+
 }
 
 function enviarVACACIONES(e){
@@ -192,6 +198,59 @@ function enviarTXTC(e){
         // Enviar la petición
         xmlhr.send(datosTXT);
     }
+}
+
+//CERRAR SESION
+function cerrarSesion(e){
+    e.preventDefault();
+    document.querySelector('.btnSalir').removeEventListener('click', cerrarSesion);
+    var employee_id = document.querySelector('#employeeID').value,
+        accion = 'salir';
+    swal({
+      title: 'Cerrar Sesión',
+      text: "Estas seguro de salir?",
+      type: 'warning',
+      showCancelButton: true,
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Si'
+    }).then((result) => {
+      if (result.value) {
+        console.log(employee_id + ' ' + accion);
+        var datosSesion = new FormData();
+        datosSesion.append('employee_id', employee_id);
+        datosSesion.append('accion', accion);
+        var xmlhr = new XMLHttpRequest();
+        xmlhr.open('POST', 'inc/model/control.php', true);
+        xmlhr.onload = function(){
+            if (this.status === 200) {
+                var respuesta = JSON.parse(xmlhr.responseText);
+                console.log(respuesta);
+                if (respuesta.estado === 'correcto') {
+                    swal({
+                          position: 'top-end',
+                          type: 'success',
+                          title: 'Sesión cerrada',
+                          showConfirmButton: false,
+                          timer: 1000
+                        })
+                        .then(resultado => {
+                                location.reload();
+                            })
+                } else {
+                    // Hubo un error
+                    swal({
+                        title: 'Error!',
+                        text: 'Hubo un error',
+                        type: 'error'
+                    })
+                }
+            }
+        }
+        xmlhr.send(datosSesion);
+      }
+    })
 }
 
 function getComboA(selectObject) {

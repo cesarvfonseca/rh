@@ -8,16 +8,16 @@ function validarRegistro(e) {
     e.preventDefault();
     
     var usuario = document.querySelector('#txtUser').value,
-        password = document.querySelector('#txtPwd').value,
-        tipo = document.querySelector('#type').value;
-        
-        if(usuario === '' || password === ''){
+    password = document.querySelector('#txtPwd').value,
+    tipo = document.querySelector('#type').value;
+
+    if(usuario === '' || password === ''){
             // la validación falló
             swal({
               type: 'error',
               title: 'Error!',
               text: 'Ambos campos son obligatorios!'
-            })
+          })
         } 
         else 
         {
@@ -41,8 +41,8 @@ function validarRegistro(e) {
                     
                     console.log(respuesta);
                     // Si la respuesta es correcta
-                    if(respuesta.respuesta === 'correcto') {
-                        // si es un nuevo usuario
+                    if(respuesta.estado === 'correcto') {
+                        // si es un acceso a sitio
                         if(respuesta.tipo === 'login'){
                             var nombreu = respuesta.nombre;
                             swal({
@@ -56,18 +56,33 @@ function validarRegistro(e) {
                                 }
                             })
                         }
-                    } else {
+                    } else if(respuesta.estado === 'error'){
+                        var informacion = respuesta.informacion;
+                        swal({
+                            title: 'Error de Acceso',
+                            text: informacion,
+                            type: 'warning'
+                        })
+                        .then(resultado => {
+                            if(resultado.value) {
+                                window.location.href = 'index.php';
+                            }
+                        })
+                    }else {
                         // Hubo un error
                         swal({
                             title: 'Error',
                             text: 'Hubo un error',
                             type: 'error'
+                        }).then(resultado => {
+                            if(resultado.value) {
+                                window.location.href = 'index.php';
+                            }
                         })
                     }
                 }
             }
-            
             // Enviar la petición
             xhr.send(datos);
         }
-}
+    }

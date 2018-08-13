@@ -7,33 +7,71 @@ if ($accion == 'login')
    $conn = Connect_DB();
    $usuario = $_POST['usuario'];
    $password = $_POST['password'];
+   //HASHEAR LA CONTRASEÑA INGRESADA EN EL ACCESO
+   $password = hash('sha512',$password);
    try{
-    $query = "SELECT * FROM PJEMPLOY WHERE employee = :Usuario";
-    $stmt = $conn ->prepare($query);
+    $query = "SELECT pe.employee,pe.emp_name,pe.emp_status,aw.password,aw.counter_login,aw.estado
+                FROM PJEMPLOY pe
+                INNER JOIN P1ACCESOWEB aw
+                ON pe.employee = aw.employee
+                WHERE pe.employee = :Usuario";
+    $stmt = $conn -> prepare($query);
     $stmt -> bindParam(':Usuario', $usuario, PDO::PARAM_STR);
     $stmt -> execute();
-    if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-     $passwordDB = trim($row['user1']);
+    if ($row = $stmt -> fetch(PDO::FETCH_ASSOC)) {
+     $passwordDB = trim($row['password']);
      $employeeName = trim(ucwords(strtolower($row['emp_name'])));
-     if ($password === $passwordDB) {
-        session_start();
-        $_SESSION["userActive"] = trim($row['employee']);
-        $_SESSION["userName"] = $employeeName;
-        $_SESSION["loginStatus"] = true;
-        $respuesta = array(
-            'respuesta' => 'correcto',
-            'nombre' => $employeeName,
-            'tipo' => $accion
+     $employee = trim($row['employee']);
+     $employee_status = trim($row['emp_status']);
+     $estado_conexion = trim($row['estado']);
+     $counter = trim($row['counter_login']);
+     $estado_en_linea = 1;
+     //VERIFICAR QUE EL EMPLEADO ESTE ACTIVO EN EL SISTEMA
+     if ($employee_status === 'A') {
+        if ($password === $passwordDB) {
+            if ($estado_conexion === '0') {
+            session_start();
+            $_SESSION["userActive"] = trim($row['employee']);
+            $_SESSION["userName"] = $employeeName;
+            $_SESSION["loginStatus"] = true;
+            $respuesta = array(
+                'estado' => 'correcto',
+                'nombre' => $employeeName,
+                'tipo' => $accion
+            );
+            //ACTUALIZAR CONTADOR DE SESIONES
+            $stmt = null;
+            $counter++;
+            $queryUpdate = "UPDATE P1ACCESOWEB SET last_login_datetime = GETDATE(),counter_login = :Counter, estado = :Estado WHERE employee = :Employee";
+            $stmt = $conn -> prepare($queryUpdate);
+            $stmt -> bindParam(':Counter', $counter, PDO::PARAM_INT);
+            $stmt -> bindParam(':Employee', $employee, PDO::PARAM_STR);
+            $stmt -> bindParam(':Estado', $estado_en_linea, PDO::PARAM_INT);
+            $stmt -> execute();
+            $stmt = null;
+        }else{
+            $respuesta = array(
+            'estado' => 'error',
+            'informacion'  => 'La sesión esta activa'
+            );
+        }
+        }else{
+           $respuesta = array(
+            'estado' => 'error',
+            'informacion'  => 'Error usuario y/o contraseña equivocados'
         );
-    }else{
-       $respuesta = array(
-          'resultado' => 'Password Incorrecto'
-      );
-   }
+       }
+   }else{
+    $respuesta = array(
+        'estado' => 'error',
+        'informacion'  => 'El trabajador esta inactivo en el sistema'
+    );
+    }
 } else {
     $respuesta = array(
-      'resultado' => 'Usuario no existe'
-  );
+        'estado' => 'error',
+        'informacion'  => 'Error usuario y/o contraseña equivocados'
+    );
 }
 $conn = null;
 }catch(PDOException $e) {
@@ -43,6 +81,32 @@ $conn = null;
 );
 }
 echo json_encode($respuesta);
+}
+
+if ($accion == 'salir')
+{
+    session_start();
+    include '../function/connection.php';
+    $conn = Connect_DB();
+    $employee = $_POST["employee_id"];
+    $estado_en_linea = 0;
+    $queryUpdate = "UPDATE P1ACCESOWEB SET estado = :Estado WHERE employee = :Employee";
+    $stmt = $conn -> prepare ($queryUpdate);
+    $stmt -> bindParam(':Estado', $estado_en_linea , PDO::PARAM_INT);
+    $stmt -> bindParam(':Employee', $employee , PDO::PARAM_STR);
+    $stmt -> execute();
+    
+    session_destroy();
+    $_SESSION = array();
+
+    $respuesta = array(
+        'estado' => 'correcto',
+        'informacion'  => 'Saliendo de la sesión'
+    );
+    $stmt = null;
+    echo json_encode($respuesta);
+
+
 }
 
 if ($accion == 'txt' || $accion == 'txtc')
@@ -59,7 +123,7 @@ if ($accion == 'txt' || $accion == 'txtc')
         else
             $tipo = 2;
         $insert_qry = "INSERT INTO P1TXTVAC (employee,fecha,tipo,horas,emp_observaciones,crtd_user,lupd_datetime,lupd_user)
-                        VALUES (:Employeeid,:Fecha,:Tipo,:Horas,:Razon,:User,GETDATE(),:Lupd_user)";
+        VALUES (:Employeeid,:Fecha,:Tipo,:Horas,:Razon,:User,GETDATE(),:Lupd_user)";
         $stmnt = $conn -> prepare ($insert_qry);
         $stmnt -> bindParam(':Employeeid', $employeeID, PDO::PARAM_STR);
         $stmnt -> bindParam(':Fecha', $fecha, PDO::PARAM_STR);
@@ -112,22 +176,22 @@ if ($accion == 'editar_incidencia')
                   'informacion' => 'La incidencia ha sido actualizada!'
               );
           }else{
-                $respuesta = array(
-                    'estado' => 'incorrecto',
-                    'informacion' => 'Ya esta validada por tu jefe directo'
-                );
-              }
-          }
-        $stmnt = null;
-        $conn = null;
-    }catch(PDOException $e) {
-        // En caso de un error, tomar la exepcion
-        $respuesta = array(
-            'estado' => 'error',
-            'log' => $e->getMessage()
-        );
+            $respuesta = array(
+                'estado' => 'incorrecto',
+                'informacion' => 'Ya esta validada por tu jefe directo'
+            );
+        }
     }
-    echo json_encode($respuesta);
+    $stmnt = null;
+    $conn = null;
+}catch(PDOException $e) {
+        // En caso de un error, tomar la exepcion
+    $respuesta = array(
+        'estado' => 'error',
+        'log' => $e->getMessage()
+    );
+}
+echo json_encode($respuesta);
 }
 
 //ELIMINAR INCIDENCIAS DEL Empleado
@@ -154,22 +218,22 @@ if ($accion == 'eliminar_incidencia')
                   'informacion' => 'La incidencia ha sido eliminada!'
               );
           }else{
-                $respuesta = array(
-                    'estado' => 'incorrecto',
-                    'informacion' => 'Ya esta validada por tu jefe directo'
-                );
-              }
-          }
-        $stmnt = null;
-        $conn = null;
-    }catch(PDOException $e) {
-        // En caso de un error, tomar la exepcion
-        $respuesta = array(
-            'estado' => 'error',
-            'log' => $e->getMessage()
-        );
+            $respuesta = array(
+                'estado' => 'incorrecto',
+                'informacion' => 'Ya esta validada por tu jefe directo'
+            );
+        }
     }
-    echo json_encode($respuesta);
+    $stmnt = null;
+    $conn = null;
+}catch(PDOException $e) {
+        // En caso de un error, tomar la exepcion
+    $respuesta = array(
+        'estado' => 'error',
+        'log' => $e->getMessage()
+    );
+}
+echo json_encode($respuesta);
 }
 
 //AUTORIZACION DEL JEFE
@@ -223,7 +287,7 @@ if ($accion == 'vacaciones')
     '8-12', // Inmaculada Concepción de la Virgen (feriado religioso)
     '13-12', // elecciones presidencial y parlamentarias (puede que se traslade al domingo 13)
     '25-12', // Natividad del Señor (feriado religioso) (irrenunciable)
-    );
+);
     include '../function/connection.php';
     $conn = Connect_DB();
     $fechaINI = $_POST['fechaINI'];
@@ -246,7 +310,7 @@ if ($accion == 'vacaciones')
             {
                 $fechaSQL = $fecha["year"]."-".$fecha["mon"]."-".$fecha["mday"];
                 $insert_vac = "INSERT INTO P1TXTVAC (employee,fecha,tipo,dias,emp_observaciones,crtd_user,lupd_datetime,lupd_user)
-                    VALUES (:Employeeid,:Fecha,:Tipo,:Dias,:Razon,:User,:Lupd_date,:Lupd_user)";
+                VALUES (:Employeeid,:Fecha,:Tipo,:Dias,:Razon,:User,:Lupd_date,:Lupd_user)";
                 $stmnt = $conn -> prepare ($insert_vac);
                 $stmnt -> bindParam(':Employeeid', $employeeID, PDO::PARAM_STR);
                 $stmnt -> bindParam(':Fecha', $fechaSQL, PDO::PARAM_STR);
@@ -260,38 +324,38 @@ if ($accion == 'vacaciones')
             }
         }
         $respuesta = array(
-                    'estado' => 'correcto'
-                );
+            'estado' => 'correcto'
+        );
         $stmt = null;
         $conn = null;
-            }catch(PDOException $e) {
+    }catch(PDOException $e) {
             // En caso de un error, tomar la exepcion
-            $respuesta = array(
+        $respuesta = array(
             'estado' => 'error',
             'log' => $e->getMessage()
-            );
-            }
+        );
+    }
     echo json_encode($respuesta);
 }
 
 function DiasHabiles($fecha_inicial,$fecha_final)
 {
-$newArray = array();
-list($year,$mes,$dia) = explode("-",$fecha_inicial);
-$ini = mktime(0, 0, 0, $mes , $dia, $year);
-list($yearf,$mesf,$diaf) = explode("-",$fecha_final);
-$fin = mktime(0, 0, 0, $mesf , $diaf, $yearf);
+    $newArray = array();
+    list($year,$mes,$dia) = explode("-",$fecha_inicial);
+    $ini = mktime(0, 0, 0, $mes , $dia, $year);
+    list($yearf,$mesf,$diaf) = explode("-",$fecha_final);
+    $fin = mktime(0, 0, 0, $mesf , $diaf, $yearf);
 
-$r = 0;
-while($ini != $fin)
-{
-$ini = mktime(0, 0, 0, $mes , $dia+$r, $year);
+    $r = 0;
+    while($ini != $fin)
+    {
+        $ini = mktime(0, 0, 0, $mes , $dia+$r, $year);
 // echo "ini = ". $ini ."
 // ";
-$newArray[] .=$ini;
-$r++;
-}
-return $newArray;
+        $newArray[] .=$ini;
+        $r++;
+    }
+    return $newArray;
 }
 
 function diasFeriados(){

@@ -44,7 +44,7 @@
  ?>
 <div class="row">
 	<div class="col-md-12 table-responsive-sm">
-		<table id="example" class="table table-striped table-bordered table-hover table-sm text-left table-sm">
+		<table id="example" class="table table-striped table-bordered table-hover text-left table-sm">
 			<thead>
 				<th>Tipo</th>
 				<th>Fecha</th>

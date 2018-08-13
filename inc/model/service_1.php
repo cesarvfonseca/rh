@@ -74,5 +74,43 @@
 	$stmnt2 -> bindParam(':bossID', $employee_id, PDO::PARAM_STR);
     $stmnt2 -> execute();
     $stmt2 = null;
+
+    // VER TIEMPO POR TIEMPO
+    $total_vacaciones=0;
+    $total_txt_favor=0;
+    $total_txt_contra=0;
+    $totales = "SELECT
+				tipo,
+				CASE
+					WHEN tipo = 1
+					THEN SUM(horas)
+				END AS total_txt_favor, 
+				CASE
+					WHEN tipo = 2
+					THEN SUM(horas) 
+				END AS total_txt_contra,
+				CASE
+					WHEN tipo = 3
+					THEN SUM(dias) 
+				END AS total_vacaciones
+				FROM P1TXTVAC 
+				WHERE employee = :empID
+				GROUP BY tipo;";
+	$stmt3 = $conn -> prepare($totales);
+	$stmt3 -> bindParam(':empID', $employee_id, PDO::PARAM_STR);
+    $stmt3 -> execute();
+
+    // $row = $stmt3->fetch(PDO::FETCH_ASSOC);
+    while ($row = $stmt3->fetch(PDO::FETCH_ASSOC)){
+    $total_vacaciones .= $row['total_vacaciones'];
+    $total_txt_favor .= $row['total_txt_favor'];
+    $total_txt_contra .= $row['total_txt_contra'];
+	}
+
+    $stmt3 = null;
+
+
     $conn = null;
+
+
  ?>
