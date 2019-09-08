@@ -1,7 +1,3 @@
-<?php 	
-	include	'inc/model/service_1.php';	
- ?>
-
 <h1>Tiempo por tiempo en contra</h1>
 <div class="row">
 	<div class="col-md-12">	
@@ -25,14 +21,20 @@
 					<textarea class="form-control" id="txtRazonc" rows="3"></textarea>
 				</div>
 			</div>
-			<div class="form-row">	
-				<label for="validationCustom02">Correo jefe directo</label>
-				<input type="text" class="form-control" id="txtMailc" value="<?php echo	$managerMail;?>" disabled>
+			<div class="form-row" id="agregar-txt" action="#">	
+				<div class="col-md-6 mb-3">
+					<label>Jefe directo</label>
+					<input type="text" class="form-control" id="txtNamec" value="<?php echo	$managerName;?>" disabled>
+				</div>
+				<div class="col-md-6 mb-3">
+					<label>Correo jefe directo</label>
+					<input type="text" class="form-control" id="txtMailc" value="<?php echo	$managerMail;?>" disabled>
+				</div>
 			</div>
 			<br>	
 			<input type="submit" class="btn btn-success nuevo-txtc" id="" value="Enviar TXTC">
 			<input type="hidden" id="typec" value="txtc">
-			<input type="hidden" id="employeeIDc" value="<?php echo $_SESSION["userActive"];?>">
+			<input type="hidden" id="employeeIDc" value="<?php echo $_SESSION["user1"];?>">
 		</form>
 	</div>
 </div>

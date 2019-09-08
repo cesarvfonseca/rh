@@ -1,84 +1,81 @@
 <?php
+#PDO COMENTADO
 $accion = $_POST['accion'];
-    //VERIFICAR QUE LA ACCION PROVIENE DEL FORM DE LOGIN
+//VERIFICAR QUE LA ACCION PROVIENE DEL FORM DE LOGIN
 if ($accion == 'login')
 {
-   include '../function/connection.php';
-   $conn = Connect_DB();
-   $usuario = $_POST['usuario'];
-   $password = $_POST['password'];
+ include '../function/connection.php';
+ $usuario = $_POST['usuario'];
+ $password = $_POST['password'];
    //HASHEAR LA CONTRASEÑA INGRESADA EN EL ACCESO
-   $password = hash('sha512',$password);
-   try{
+ $password = hash('sha512',$password);
+ try{
     $query = "SELECT pe.employee,pe.emp_name,pe.emp_status,aw.password,aw.counter_login,aw.estado
-                FROM PJEMPLOY pe
-                INNER JOIN P1ACCESOWEB aw
-                ON pe.employee = aw.employee
-                WHERE pe.employee = :Usuario";
-    $stmt = $conn -> prepare($query);
-    $stmt -> bindParam(':Usuario', $usuario, PDO::PARAM_STR);
-    $stmt -> execute();
-    if ($row = $stmt -> fetch(PDO::FETCH_ASSOC)) {
-     $passwordDB = trim($row['password']);
-     $employeeName = trim(ucwords(strtolower($row['emp_name'])));
-     $employee = trim($row['employee']);
-     $employee_status = trim($row['emp_status']);
-     $estado_conexion = trim($row['estado']);
-     $counter = trim($row['counter_login']);
-     $estado_en_linea = 1;
+    FROM PJEMPLOY pe
+    INNER JOIN P1ACCESOWEB aw
+    ON pe.employee = aw.employee
+    WHERE pe.employee = ?";
+    $params = array( $usuario );
+    $stmt = sqlsrv_query( $con, $query, $params );
+
+    if ($row = sqlsrv_fetch_array( $stmt, SQLSRV_FETCH_ASSOC)) {
+       $passwordDB = trim($row['password']);
+       $employeeName = trim(ucwords(strtolower($row['emp_name'])));
+       $employee = trim($row['employee']);
+       $employee_status = trim($row['emp_status']);
+       $estado_conexion = trim($row['estado']);
+       $counter = trim($row['counter_login']);
+       $estado_en_linea = 1;
      //VERIFICAR QUE EL EMPLEADO ESTE ACTIVO EN EL SISTEMA
-     if ($employee_status === 'A') {
+       if ($employee_status === 'A') {
         if ($password === $passwordDB) {
             if ($estado_conexion === '0') {
-            session_start();
-            $_SESSION["userActive"] = trim($row['employee']);
-            $_SESSION["userName"] = $employeeName;
-            $_SESSION["loginStatus"] = true;
-            $respuesta = array(
-                'estado' => 'correcto',
-                'nombre' => $employeeName,
-                'tipo' => $accion
-            );
+                session_start();
+                $_SESSION["userActive"] = trim($row['employee']);
+                $_SESSION["userName"] = $employeeName;
+                $_SESSION["loginStatus"] = true;
+                $respuesta = array(
+                    'estado' => 'correcto',
+                    'nombre' => $employeeName,
+                    'tipo' => $accion
+                    );
             //ACTUALIZAR CONTADOR DE SESIONES
-            $stmt = null;
-            $counter++;
-            $queryUpdate = "UPDATE P1ACCESOWEB SET last_login_datetime = GETDATE(),counter_login = :Counter, estado = :Estado WHERE employee = :Employee";
-            $stmt = $conn -> prepare($queryUpdate);
-            $stmt -> bindParam(':Counter', $counter, PDO::PARAM_INT);
-            $stmt -> bindParam(':Employee', $employee, PDO::PARAM_STR);
-            $stmt -> bindParam(':Estado', $estado_en_linea, PDO::PARAM_INT);
-            $stmt -> execute();
-            $stmt = null;
+                $counter++;
+                $queryUpdate = "UPDATE P1ACCESOWEB SET last_login_datetime = GETDATE(),counter_login = ?, estado = ? WHERE employee = ?";
+                $params = array( $counter, $estado_en_linea, $employee );
+                $stmtUpd = sqlsrv_query( $con, $queryUpdate, $params );
+                sqlsrv_free_stmt( $stmtUpd);
+            }else{
+                $respuesta = array(
+                    'estado' => 'error',
+                    'informacion'  => 'La sesión esta activa'
+                    );
+            }
         }else{
-            $respuesta = array(
-            'estado' => 'error',
-            'informacion'  => 'La sesión esta activa'
-            );
-        }
-        }else{
-           $respuesta = array(
+         $respuesta = array(
             'estado' => 'error',
             'informacion'  => 'Error usuario y/o contraseña equivocados'
-        );
-       }
-   }else{
+            );
+     }
+ }else{
     $respuesta = array(
         'estado' => 'error',
         'informacion'  => 'El trabajador esta inactivo en el sistema'
-    );
-    }
+        );
+}
 } else {
     $respuesta = array(
         'estado' => 'error',
         'informacion'  => 'Error usuario y/o contraseña equivocados'
-    );
+        );
 }
-$conn = null;
+sqlsrv_free_stmt( $stmt);
+sqlsrv_close( $con );
 }catch(PDOException $e) {
     // En caso de un error, tomar la exepcion
-   $respuesta = array(
+ $respuesta = array(
     'pass' => $e->getMessage()
-);
+    );
 }
 echo json_encode($respuesta);
 }
@@ -87,14 +84,13 @@ if ($accion == 'salir')
 {
     session_start();
     include '../function/connection.php';
-    $conn = Connect_DB();
     $employee = $_POST["employee_id"];
     $estado_en_linea = 0;
-    $queryUpdate = "UPDATE P1ACCESOWEB SET estado = :Estado WHERE employee = :Employee";
-    $stmt = $conn -> prepare ($queryUpdate);
-    $stmt -> bindParam(':Estado', $estado_en_linea , PDO::PARAM_INT);
-    $stmt -> bindParam(':Employee', $employee , PDO::PARAM_STR);
-    $stmt -> execute();
+    $queryUpdate = "UPDATE P1ACCESOWEB SET estado = ? WHERE employee = ?";
+    $params = array( $estado_en_linea, $employee );
+    $stmt = sqlsrv_query( $con, $queryUpdate, $params );
+    sqlsrv_free_stmt( $stmt);
+    sqlsrv_close( $con );
     
     session_destroy();
     $_SESSION = array();
@@ -102,49 +98,51 @@ if ($accion == 'salir')
     $respuesta = array(
         'estado' => 'correcto',
         'informacion'  => 'Saliendo de la sesión'
-    );
-    $stmt = null;
+        );
     echo json_encode($respuesta);
-
-
 }
 
 if ($accion == 'txt' || $accion == 'txtc')
 {
     include '../function/connection.php';
-    $conn = Connect_DB();
     $fecha = $_POST['fecha'];
     $horas = $_POST['horas'];
     $razon = $_POST['razon'];
     $employeeID = $_POST["employeeID"];
+    $nombre_empleado = $_POST["n_empleado"];
+    $nombre_destinatario = $_POST["n_destinatario"];
+    $correo_destinatario = $_POST["c_destinatario"];
     try{
         if ($accion == 'txt')
             $tipo = 1;
         else
             $tipo = 2;
         $insert_qry = "INSERT INTO P1TXTVAC (employee,fecha,tipo,horas,emp_observaciones,crtd_user,lupd_datetime,lupd_user)
-        VALUES (:Employeeid,:Fecha,:Tipo,:Horas,:Razon,:User,GETDATE(),:Lupd_user)";
-        $stmnt = $conn -> prepare ($insert_qry);
-        $stmnt -> bindParam(':Employeeid', $employeeID, PDO::PARAM_STR);
-        $stmnt -> bindParam(':Fecha', $fecha, PDO::PARAM_STR);
-        $stmnt -> bindParam(':Tipo', $tipo, PDO::PARAM_INT);
-        $stmnt -> bindParam(':Horas', $horas, PDO::PARAM_INT);
-        $stmnt -> bindParam(':Razon', $razon, PDO::PARAM_STR);
-        $stmnt -> bindParam(':User', $employeeID, PDO::PARAM_STR);
-        $stmnt -> bindParam(':Lupd_user', $employeeID, PDO::PARAM_STR);
-        $stmnt -> execute();
-        $respuesta = array(
-            'estado' => 'correcto'
-        );
-        $stmt = null;
-        $conn = null;
+        VALUES (?,?,?,?,?,?,GETDATE(),?)";
+        $params = array( $employeeID, $fecha, $tipo, $horas, $razon, $employeeID, $employeeID);
+        $stmt = sqlsrv_query( $con, $insert_qry, $params );
+        if( $stmt ) {
+            $respuesta = array(
+                'estado' => 'correcto'
+                );
+            $fechaINI = $fecha;
+            $fechaFIN = '';
+            //PARA ENVIO DE CORREO
+            enviarCorreo ($correo_destinatario,$nombre_destinatario,$employeeID, $nombre_empleado, $accion, $razon, $fechaINI, $fechaFIN, $horas);
+        }else{
+            die( print_r( sqlsrv_errors(), true));
+        }
+        sqlsrv_free_stmt( $stmt);
+        sqlsrv_close( $con );
     }catch(PDOException $e) {
         // En caso de un error, tomar la exepcion
         $respuesta = array(
             'estado' => 'error',
             'log' => $e->getMessage()
-        );
+            );
     }
+
+    
     echo json_encode($respuesta);
 }
 
@@ -153,85 +151,95 @@ if ($accion == 'editar_incidencia')
 {
     // die(json_encode($_POST));
     include '../function/connection.php';
-    $conn = Connect_DB();
     $horas = $_POST['horas'];
     $idempleado = $_POST['idempleado'];
     $idmov = $_POST['idmov'];
     try{
-        $queryv = "SELECT jefe_autorizacion FROM P1TXTVAC WHERE id=:ID_MOV";
-        $stmnt = $conn -> prepare ($queryv);
-        $stmnt -> bindParam(':ID_MOV', $idmov, PDO::PARAM_INT);
-        $stmnt -> execute();
-        if ($row = $stmnt->fetch(PDO::FETCH_ASSOC)) {
-          $estado = $row['jefe_autorizacion'];
-          if ($estado == 0) {
-              $update_qry = "UPDATE P1TXTVAC SET horas = :Horas, lupd_datetime = GETDATE(), lupd_user = :User WHERE id = :ID";
-              $stmnt = $conn -> prepare ($update_qry);
-              $stmnt -> bindParam(':Horas', $horas, PDO::PARAM_INT);
-              $stmnt -> bindParam(':User', $idempleado, PDO::PARAM_INT);
-              $stmnt -> bindParam(':ID', $idmov, PDO::PARAM_INT);
-              $stmnt -> execute();
-              $respuesta = array(
-                  'estado' => 'correcto',
-                  'informacion' => 'La incidencia ha sido actualizada!'
-              );
-          }else{
-            $respuesta = array(
-                'estado' => 'incorrecto',
-                'informacion' => 'Ya esta validada por tu jefe directo'
-            );
+        $queryv = "SELECT jefe_autorizacion FROM P1TXTVAC WHERE id=?";
+        $params = array( $idmov );
+        $stmt_verificar_autorizacion = sqlsrv_query( $con, $queryv, $params );
+        if( $stmt_verificar_autorizacion ) {
+            if ($row = sqlsrv_fetch_array( $stmt_verificar_autorizacion, SQLSRV_FETCH_ASSOC)) {
+              $estado = $row['jefe_autorizacion'];
+              if ($estado == 0) {
+                $update_qry = "UPDATE P1TXTVAC SET horas = ?, lupd_datetime = GETDATE(), lupd_user = ? WHERE id = ?";
+                $params = array( $horas, $idempleado, $idmov);
+                $stmt = sqlsrv_query( $con, $update_qry, $params );
+                if( $stmt ) {
+                    $respuesta = array(
+                        'estado' => 'correcto',
+                        'informacion' => 'La incidencia ha sido actualizada!'
+                        );
+                }else{
+                    die( print_r( sqlsrv_errors(), true));
+                }
+                sqlsrv_free_stmt( $stmt);
+            }else{
+                $respuesta = array(
+                    'estado' => 'incorrecto',
+                    'informacion' => 'Ya esta validada por tu jefe directo'
+                    );
+            }
         }
+    } else {
+        die( print_r( sqlsrv_errors(), true));
     }
-    $stmnt = null;
-    $conn = null;
+    sqlsrv_free_stmt( $stmt_verificar_autorizacion );
+    sqlsrv_close( $con );
 }catch(PDOException $e) {
         // En caso de un error, tomar la exepcion
     $respuesta = array(
         'estado' => 'error',
         'log' => $e->getMessage()
-    );
+        );
 }
 echo json_encode($respuesta);
 }
 
-//ELIMINAR INCIDENCIAS DEL Empleado
+//ELIMINAR INCIDENCIAS DEL EMPLEADO
 if ($accion == 'eliminar_incidencia')
 {
     // die(json_encode($_POST));
     include '../function/connection.php';
-    $conn = Connect_DB();
     $id_mov = $_POST['id_mov'];
     try{
-        $queryv = "SELECT jefe_autorizacion FROM P1TXTVAC WHERE id=:ID_MOV";
-        $stmnt = $conn -> prepare ($queryv);
-        $stmnt -> bindParam(':ID_MOV', $id_mov, PDO::PARAM_INT);
-        $stmnt -> execute();
-        if ($row = $stmnt->fetch(PDO::FETCH_ASSOC)) {
-          $estado = $row['jefe_autorizacion'];
-          if ($estado==0) {
-              $delete_qry = "DELETE FROM P1TXTVAC WHERE id=:IDMOV";
-              $stmnt = $conn -> prepare ($delete_qry);
-              $stmnt -> bindParam(':IDMOV', $id_mov, PDO::PARAM_INT);
-              $stmnt -> execute();
-              $respuesta = array(
-                  'estado' => 'correcto',
-                  'informacion' => 'La incidencia ha sido eliminada!'
-              );
-          }else{
+        $queryv = "SELECT jefe_autorizacion FROM P1TXTVAC WHERE id= ?";
+        $params = array( $id_mov );
+        $stmt_verificar_autorizacion = sqlsrv_query( $con, $queryv, $params );
+        if( $stmt_verificar_autorizacion ) {
+            if ($row = sqlsrv_fetch_array( $stmt_verificar_autorizacion, SQLSRV_FETCH_ASSOC)) {
+              $estado = $row['jefe_autorizacion'];
+              if ($estado==0) {
+                $delete_qry = "DELETE FROM P1TXTVAC WHERE id= ?";
+                $params = array( $id_mov );
+                $stmt = sqlsrv_query( $con, $delete_qry, $params );
+                if( $stmt ) {
+                    $respuesta = array(
+                        'estado' => 'correcto',
+                        'informacion' => 'La incidencia ha sido eliminada!'
+                        );
+                }else{
+                   die( print_r( sqlsrv_errors(), true)); 
+               }
+               sqlsrv_free_stmt( $stmt );
+           }else{
             $respuesta = array(
                 'estado' => 'incorrecto',
                 'informacion' => 'Ya esta validada por tu jefe directo'
-            );
+                );
         }
     }
-    $stmnt = null;
-    $conn = null;
+}else {
+    die( print_r( sqlsrv_errors(), true));
+}
+sqlsrv_free_stmt( $stmt_verificar_autorizacion );
+sqlsrv_close( $con );
 }catch(PDOException $e) {
         // En caso de un error, tomar la exepcion
     $respuesta = array(
         'estado' => 'error',
         'log' => $e->getMessage()
-    );
+        );
 }
 echo json_encode($respuesta);
 }
@@ -241,34 +249,121 @@ if ($accion == 'voboJefe')
 {
     // die(json_encode($_POST));
     include '../function/connection.php';
-    $conn = Connect_DB();
     $idM = $_POST['id'];
     $status = $_POST['status'];
     $employeeID = $_POST['idempleado'];
     $observaciones_default = $_POST['observaciones_default'];
     try{
-        $update_qry = "UPDATE P1TXTVAC SET jefe_autorizacion=:Status, lupd_datetime=GETDATE(), lupd_user=:Employeeid,jefe_observaciones=:Observaciones_jefe WHERE id=:IDM";
-        $stmnt = $conn -> prepare ($update_qry);
-        $stmnt -> bindParam(':Status', $status, PDO::PARAM_INT);
-        $stmnt -> bindParam(':Employeeid', $employeeID, PDO::PARAM_STR);
-        $stmnt -> bindParam(':Observaciones_jefe', $observaciones_default, PDO::PARAM_STR);
-        $stmnt -> bindParam(':IDM', $idM, PDO::PARAM_INT);
-        $stmnt -> execute();
-        $respuesta = array(
-            'estado' => 'correcto'
-        );
-        $stmnt = null;
-        $conn = null;
+        $update_qry = "UPDATE P1TXTVAC SET jefe_autorizacion= ?, lupd_datetime=GETDATE(), lupd_user= ?,jefe_observaciones= ? WHERE id= ?";
+        $params = array( $status,$employeeID,$observaciones_default,$idM );
+        $stmt = sqlsrv_query( $con, $update_qry, $params );
+        if( $stmt ) {
+            $respuesta = array(
+                'estado' => 'correcto'
+                );
+        }else{
+            die( print_r( sqlsrv_errors(), true)); 
+        }
+        sqlsrv_free_stmt( $stmt );
     }catch(PDOException $e) {
         // En caso de un error, tomar la exepcion
         $respuesta = array(
             'estado' => 'error',
             'log' => $e->getMessage()
-        );
+            );
     }
     echo json_encode($respuesta);
 }
 
+//VISTO BUENO RH
+if ($accion == 'voboRH')
+{
+    // die(json_encode($_POST));
+    include '../function/connection.php';
+    $idM = $_POST['id'];
+    $status = $_POST['status'];
+    $employeeID = $_POST['idempleado'];
+    $observaciones_default = $_POST['observaciones_default'];
+    try{
+        $update_qry = "UPDATE P1TXTVAC SET rh_vobo = ?, lupd_datetime=GETDATE(), lupd_user= ?,rh_observaciones= ? WHERE id= ?";
+        $params = array( $status,$employeeID,$observaciones_default,$idM );
+        $stmt = sqlsrv_query( $con, $update_qry, $params );
+        if( $stmt ) {
+            $respuesta = array(
+                'estado' => 'correcto'
+                );
+        }else{
+            die( print_r( sqlsrv_errors(), true)); 
+        }
+        sqlsrv_free_stmt( $stmt );
+    }catch(PDOException $e) {
+        // En caso de un error, tomar la exepcion
+        $respuesta = array(
+            'estado' => 'error',
+            'log' => $e->getMessage()
+            );
+    }
+    echo json_encode($respuesta);
+}
+
+
+//ELIMINAR REGISTROS ANTIGUOS
+if ($accion == 'eliminar_regviejos') {
+    // die(json_encode($_POST));
+    include '../function/connection.php';
+    $id_empleado = $_POST['id_empleado'];
+    $name;
+    $queryVerify = "SELECT id,jefe_autorizacion,DATEDIFF(D,crtd_datetime,GETDATE()) AS dias_previos FROM P1TXTVAC WHERE employee = ?";
+    $params = array( $id_empleado );
+    $stmt = sqlsrv_query( $con, $queryVerify, $params );
+    if( $stmt === false ) {
+       die( print_r( sqlsrv_errors(), true));
+   }
+   while ($row = sqlsrv_fetch_array( $stmt, SQLSRV_FETCH_ASSOC)){
+    $idmovimiento = $row ["id"];
+    $autorizacion = $row ["jefe_autorizacion"];
+    $dias = $row ["dias_previos"];
+    if ($autorizacion == 2 && $dias > 22) {
+        $queryDelete = "DELETE FROM P1TXTVAC WHERE id= ?";
+        $params = array( $idmovimiento );
+        $stmt_borrar = sqlsrv_query( $con, $queryDelete, $params );
+        if( $stmt_borrar === false ) {
+           die( print_r( sqlsrv_errors(), true));
+       }
+       $rows_affected = sqlsrv_rows_affected( $stmt_borrar);
+       if( $rows_affected === false) {
+           die( print_r( sqlsrv_errors(), true));
+           $respuesta = array(
+            'estado' => 'error',
+            'informacion' => 'Error en la eliminación de los datos'
+            );                 
+       } elseif( $rows_affected == -1) {
+        $respuesta = array(
+            'estado' => 'error',
+            'informacion' => 'No hay informacion antigua para eliminar'
+            );
+    } else {
+        $respuesta = array(
+            'estado' => 'correcto',
+            'informacion' => 'Registroas Antiguos Eliminados'
+            );
+    }
+    sqlsrv_free_stmt( $stmt_borrar );            
+}
+$respuesta = array(
+    'estado' => 'correcto',
+    'informacion' => 'No hay informacion antigua para eliminar'
+    );        
+}
+
+sqlsrv_free_stmt( $stmt );
+
+echo json_encode( $respuesta );
+}
+//ELIMINAR REGISTROS ANTIGUOS
+
+
+//CALCULAR VACACIONES
 if ($accion == 'vacaciones')
 {
     $feriados = array(
@@ -287,13 +382,15 @@ if ($accion == 'vacaciones')
     '8-12', // Inmaculada Concepción de la Virgen (feriado religioso)
     '13-12', // elecciones presidencial y parlamentarias (puede que se traslade al domingo 13)
     '25-12', // Natividad del Señor (feriado religioso) (irrenunciable)
-);
+    );
     include '../function/connection.php';
-    $conn = Connect_DB();
     $fechaINI = $_POST['fechaINI'];
     $fechaFIN = $_POST['fechaFIN'];
     $razon = $_POST['razon'];
     $employeeID = $_POST['employeeID'];
+    $nombre_empleado = $_POST["n_empleado"];
+    $nombre_destinatario = $_POST["n_destinatario"];
+    $correo_destinatario = $_POST["c_destinatario"];    
     $NOW = date('Y-m-d');
     $param = 1;
     $tipo = 3;
@@ -310,32 +407,29 @@ if ($accion == 'vacaciones')
             {
                 $fechaSQL = $fecha["year"]."-".$fecha["mon"]."-".$fecha["mday"];
                 $insert_vac = "INSERT INTO P1TXTVAC (employee,fecha,tipo,dias,emp_observaciones,crtd_user,lupd_datetime,lupd_user)
-                VALUES (:Employeeid,:Fecha,:Tipo,:Dias,:Razon,:User,:Lupd_date,:Lupd_user)";
-                $stmnt = $conn -> prepare ($insert_vac);
-                $stmnt -> bindParam(':Employeeid', $employeeID, PDO::PARAM_STR);
-                $stmnt -> bindParam(':Fecha', $fechaSQL, PDO::PARAM_STR);
-                $stmnt -> bindParam(':Tipo', $tipo, PDO::PARAM_INT);
-                $stmnt -> bindParam(':Dias', $param, PDO::PARAM_INT);
-                $stmnt -> bindParam(':Razon', $razon, PDO::PARAM_STR);
-                $stmnt -> bindParam(':User', $employeeID, PDO::PARAM_STR);
-                $stmnt -> bindParam(':Lupd_date', $NOW, PDO::PARAM_STR);
-                $stmnt -> bindParam(':Lupd_user', $employeeID, PDO::PARAM_STR);
-                $stmnt -> execute();
-            }
-        }
-        $respuesta = array(
-            'estado' => 'correcto'
+                VALUES (?,?,?,?,?,?,?,?)";
+                $params = array( $employeeID,$fechaSQL,$tipo,$param,$razon,$employeeID,$NOW,$employeeID );
+                $stmt = sqlsrv_query( $con, $insert_vac, $params );
+                if( $stmt === false ) {
+                   die( print_r( sqlsrv_errors(), true));
+               }
+           }
+       }
+       $respuesta = array(
+        'estado' => 'correcto'
         );
         $stmt = null;
         $conn = null;
-    }catch(PDOException $e) {
-            // En caso de un error, tomar la exepcion
-        $respuesta = array(
-            'estado' => 'error',
-            'log' => $e->getMessage()
+        $horas = '';
+        enviarCorreo ($correo_destinatario,$nombre_destinatario,$employeeID, $nombre_empleado, $accion, $razon, $fechaINI, $fechaFIN, $horas);
+   }catch(PDOException $e) {
+    // En caso de un error, tomar la exepcion
+    $respuesta = array(
+        'estado' => 'error',
+        'log' => $e->getMessage()
         );
-    }
-    echo json_encode($respuesta);
+}
+echo json_encode($respuesta);
 }
 
 function DiasHabiles($fecha_inicial,$fecha_final)
@@ -350,8 +444,6 @@ function DiasHabiles($fecha_inicial,$fecha_final)
     while($ini != $fin)
     {
         $ini = mktime(0, 0, 0, $mes , $dia+$r, $year);
-// echo "ini = ". $ini ."
-// ";
         $newArray[] .=$ini;
         $r++;
     }
@@ -360,6 +452,47 @@ function DiasHabiles($fecha_inicial,$fecha_final)
 
 function diasFeriados(){
 
+}
+
+function enviarCorreo ($correo_destinatario,$nombre_destinatario,$employeeID, $nombre_empleado, $accion, $razon, $fechaINI, $fechaFIN, $detalle) 
+{
+    //ENVIO DE CORREO
+    // Here is the data we will be sending to the service
+  $envio_datos = array(
+    'correo_destinatario' => $correo_destinatario, 
+    'nombre_destinatario' => $nombre_destinatario, 
+    'employeeID' => $employeeID,
+    'tipo' => $accion,
+    'nombre_empleado' => $nombre_empleado,
+    'razon' => $razon,
+    'fechaINI' => $fechaINI,
+    'fechaFIN' => $fechaFIN,
+    'detalle' => $detalle
+    );  
+
+  // var_dump($envio_datos);
+
+  $curl = curl_init();
+      // $curl = curl_init();
+      // You can also set the URL you want to communicate with by doing this:
+      // $curl = curl_init('http://localhost/echoservice');
+
+      // We POST the data
+  curl_setopt($curl, CURLOPT_POST, 1);
+      // Set the url path we want to call
+  curl_setopt($curl, CURLOPT_URL, 'http://mexq.mx/devweb/webServices/envio_correo.php');  
+      // Make it so the data coming back is put into a string
+  curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+      // Insert the data
+  curl_setopt($curl, CURLOPT_POSTFIELDS, $envio_datos);
+
+      // You can also bunch the above commands into an array if you choose using: curl_setopt_array
+
+      // Send the request
+  $result = curl_exec($curl);
+      // Free up the resources $curl is using
+  curl_close($curl);
+        //ENVIO DE CORREO
 }
 
 ?>

@@ -1,7 +1,3 @@
-<?php 	
-	include	'inc/model/service_1.php';	
- ?>
-
 <h1>Tiempo por tiempo a favor</h1>
 <div class="row">
 	<div class="col-md-12">	
@@ -23,13 +19,19 @@
 				</div>
 			</div>
 			<div class="form-row" id="agregar-txt" action="#">	
-				<label>Correo jefe directo</label>
-				<input type="text" class="form-control" id="txtMail" value="<?php echo	$managerMail;?>" disabled>
+				<div class="col-md-6 mb-3">
+					<label>Jefe directo</label>
+					<input type="text" class="form-control" id="txtName" value="<?php echo	$managerName;?>" disabled>
+				</div>
+				<div class="col-md-6 mb-3">
+					<label>Correo jefe directo</label>
+					<input type="text" class="form-control" id="txtMail" value="<?php echo	$managerMail;?>" disabled>
+				</div>
 			</div>
 			<br>	
 			<input type="submit" class="btn btn-success nuevo-txt" id="" value="Enviar">
 			<input type="hidden" id="type" value="txt">
-			<input type="hidden" id="employeeID" value="<?php echo $_SESSION["userActive"];?>">
+			<input type="hidden" id="employeeID" value="<?php echo $_SESSION["user1"];?>">
 		</form>
 	</div>
 </div>
